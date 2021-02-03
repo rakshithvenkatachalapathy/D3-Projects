@@ -1,0 +1,153 @@
+<!--reference example  https://bl.ocks.org/d3noob/38744a17f9c0141bcd04 -->
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    /* set the CSS */
+
+    body {
+        font: 12px Arial;
+    }
+
+    path {
+        stroke: steelblue;
+        stroke-width: 2;
+        fill: none;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: grey;
+        stroke-width: 1;
+        shape-rendering: crispEdges;
+    }
+</style>
+
+<body>
+
+    <!-- load the d3.js library -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+
+    <script>
+
+        // Set the dimensions of the canvas / graph
+        var margin = { top: 30, right: 20, bottom: 30, left: 50 },
+            width = 900 - margin.left - margin.right,
+            height = 270 - margin.top - margin.bottom;
+
+        // set the ranges
+        var x = d3.scaleBand()
+            .range([0, width])
+            .padding(0.5);
+        var y = d3.scaleLinear()
+            .range([height, 0]);
+
+        // Adds the svg canvas
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("text")
+            .attr("transform", "translate(100,0)")
+            .attr("x", 50)
+            .attr("y", 0)
+            .attr("font-size", "24px")
+            .text("Delays due to weather at different airports 2003-16")
+
+        // Get the data
+        d3.csv("airlines.csv").then(function (data) {
+            data.forEach(function (d) {
+                d["Statistics.# of Delays.Weather"] = +d["Statistics.# of Delays.Weather"];
+            });
+
+
+            // create a tooltip
+            var tooltip = d3.select("body")
+                .append("div")
+                .style("opacity", 0)
+                .attr("class", "tooltip")
+                .style("background-color", "white")
+                .style("border", "solid")
+                .style("border-width", "2px")
+                .style("border-radius", "5px")
+                .style("padding", "5px")
+
+            var mouseover = function (d) {
+                tooltip
+                    .style("opacity", 1)
+                d3.select(this)
+                    .style("stroke", "black")
+                    .style("opacity", 1)
+            }
+            var mousemove = function (d, i) {
+                console.log(i)
+
+                tooltip
+                    .html("The number of delays at "+ i[0] +" is " + i[1])
+                    .style("left", (d3.pointer(this)[0] + 70) + "px")
+                    .style("top", (d3.pointer(this)[1]) + "px")
+            }
+            var mouseleave = function (d) {
+                tooltip
+                    .style("opacity", 0)
+                d3.select(this)
+                    .style("stroke", "none")
+                    .style("opacity", 0.8)
+            }
+            // getting the data by summing it up
+            var myData = d3.rollup(data,
+                function (v) { return d3.sum(v, function (d) { return d["Statistics.# of Delays.Weather"]; }) },
+                function (d) { return d["Airport.Code"]; });
+            console.log(myData)
+
+
+            x.domain(data.map(function (d) { return d["Airport.Code"]; }));
+            y.domain([0, d3.max(myData, d => d[1])]);
+
+            // Add the scatterplot
+            svg.selectAll("dot")
+                .data(myData)
+                .enter().append("circle")
+                .attr("r", 3.5)
+                .attr("cx", function (d) {
+                    x
+                    return x(d[0]);
+                })
+                .attr("cy", function (d) { return y(d[1]); })
+                .on("mouseover", mouseover)
+                .on("mousemove", mousemove)
+                .on("mouseleave", mouseleave);;;
+
+            // Add the X Axis
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x))
+                .append("text")
+                .attr("y", height - 185)
+                .attr("x", width - 100)
+                .attr("text-anchor", "end")
+                .attr("stroke", "black")
+                .text("Airport");
+
+            // Add the Y Axis
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 9)
+                .attr("dy", "-5.1em")
+                .attr("text-anchor", "end")
+                .attr("stroke", "black")
+                .text("Delays due to weather");
+
+        });
+
+    </script>
+</body>
